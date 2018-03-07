@@ -75,15 +75,63 @@ def prop_BT(csp, newVar=None):
                 return False, []
     return True, []
 
-def prop_FC(csp, newVar=None):
-    # TODO! IMPLEMENT THIS!
-    pass
+def FCcheck (c, x, pruned):
+    for d in x.cur_domain ():
+        if not c.has_support (x,d):
+            pruned.append ((x,d))
+            x.prune_value (d)
+    if x.cur_domain_size() == 0:
+        return False, pruned
+    return True, pruned
 
+def prop_FC(csp, newVar=None):
+
+    pruned = []
+    con = []
+    
+    if newVar == None:
+        con = csp.get_all_cons()
+    else:
+        con = csp.get_cons_with_var(newVar)
+                
+    for c in con:
+        if c.get_n_unasgn() == 1:
+            var = c.get_unasgn_vars()[0]
+            check, pruned = FCcheck (c, var, pruned)
+            if not check:
+                return False, pruned
+    
+    return True, pruned
+    
+def GAC_Enforce (csp, Q, pruned):
+    while Q:
+        C = Q.pop (0)
+        for V in C.get_scope ():
+            if V.is_assigned () == False:
+                for d in V.cur_domain ():
+                    if not C.has_support (V, d):
+                        V.prune_value (d)
+                        pruned.append ((V, d))
+                        if V.cur_domain_size () == 0:
+                            return False, pruned
+                        else:  
+                            con = csp.get_cons_with_var (V)
+                            for c in con:
+                                if c not in Q:
+                                    Q.append (c)
+    return True, pruned
+    
+    
 def prop_GAC(csp, newVar=None):
-    '''
-    Do GAC propagation. If newVar is None we do initial GAC enforce processing 
-    all constraints. Otherwise we do GAC enforce with constraints containing 
-    newVar on GAC Queue.
-    '''
-    # TODO! IMPLEMENT THIS!
-    pass
+
+    pruned = []
+    con = []
+    
+    if newVar == None:
+        con = csp.get_all_cons()
+    else:
+        con = csp.get_cons_with_var(newVar)
+        
+    check, pruned = GAC_Enforce (csp, con, pruned)
+    
+    return check, pruned
